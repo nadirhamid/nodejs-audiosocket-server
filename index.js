@@ -94,7 +94,7 @@ export class AudiosocketSocket extends EventEmitter {
         super();
         this.sock = sock;
     }
-    sendAudio(data) {
+    async sendAudio(data) {
         return sendAudio( this.sock, data );
     }
 }
