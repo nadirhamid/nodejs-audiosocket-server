@@ -6,22 +6,18 @@ const server = net.createServer();
 var port = 8080;
 var host = "0.0.0.0";
 
-const messageTypeMap = {
-	hangup: 0x00,
-	id: 0x01,
-	silence: 0x02,
-	slin: 0x10,
-	error: 0xff
+export const AudiosocketMessageTypes = {
+	HANGUP: 0x00,
+	ID: 0x01,
+	SILENCE: 0x02,
+	SLIN: 0x10,
+	ERROR: 0xff
 };
 
-
-function getByteArray(filePath){
-    let fileData = fs.readFileSync(filePath);
-    return fileData;
-}
+const validMessages = Object.values( AudiosocketMessageTypes );
 
 const sendAudio = (sock, data) => {
-    const slinChunkSize = 320 // 8000Hz * 20ms * 2 bytes
+    const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
     let i = 0;
     let chunks = 0;
   
@@ -31,13 +27,12 @@ const sendAudio = (sock, data) => {
         return;
       }
   
-      let chunkLen = slinChunkSize;
-      if (i + slinChunkSize > data.length) {
+      let chunkLen = SLINChunkSize;
+      if (i + SLINChunkSize > data.length) {
         chunkLen = data.length - i;
       }
  
       const chunk = SlinMessage(data.slice(i, i + chunkLen));
-      console.log("sending chunk ", chunk);
       if (!sock.write(chunk)) {
         sock.once('drain', () => {
           if (i < data.length) {
@@ -57,8 +52,8 @@ const sendAudio = (sock, data) => {
         return;
       }
   
-      let chunkLen = slinChunkSize;
-      if (i + slinChunkSize > data.length) {
+      let chunkLen = SLINChunkSize;
+      if (i + SLINChunkSize > data.length) {
         chunkLen = data.length - i;
       }
   
@@ -87,49 +82,58 @@ const SlinMessage = (inData) => {
     }
   
     const out = Buffer.alloc(3 + inData.length);
-    out[0] = messageTypeMap.slin; 
+    out[0] = AudiosocketMessageTypes.SLIN; 
     out.writeUInt16BE(inData.length, 1);
     inData.copy(out, 3);
     return out;
 };
 
-function Audiosocket(port, host) {
-    server.listen(port, host, () => {
-        console.log('TCP Server is running on port ' + port +'.');
-    });
 
-    let sockets = [];
-
-    var audio = getByteArray("./test.slin");
-    server.on('connection', function(sock) {
-        console.log('CONNECTED: ' + sock.remoteAddress + ':' + sock.remotePort);
-        sockets.push(sock);
-
-        sock.on('data', function(data) {
-            console.log('DATA ' + sock.remoteAddress + ': ' + data);
-            //emitter.emit('data', data);
-            const header = data.slice(0, 3);
-            const payload = data.slice(3, data.length-1);
-            const messageType = header[0];
-
-            console.log('header ', header);
-            if ( messageType === messageTypeMap.id ) {
-                console.log('got id ', payload);
-                setTimeout(async () => {
-                    console.log("sending audio");
-                    await sendAudio( sock, audio );
-                }, 1000*2 );
-            } else if ( messageType === messageTypeMap.hangup ) {
-                console.log('got hangup ', payload);
-            } else if ( messageType === messageTypeMap.silence ) {
-                console.log('got silence ', payload);
-            } else if ( messageType === messageTypeMap.slin ) {
-                console.log('got audio data ', payload);
-            } else if ( messageType === messageTypeMap.error ) {
-                console.log('got error ', payload);
-            }
-        });
-    });
+export class AudiosocketSocket extends EventEmitter {
+    constructor(sock) {
+        super();
+        this.sock = sock;
+    }
+    sendAudio(data) {
+        return sendAudio( this.sock, data );
+    }
 }
 
-Audiosocket(8080, '0.0.0.0');
+export class AudiosocketServer extends EventEmitter {
+
+    constructor(port, host) {
+        super();
+        server.listen(port, host, () => {
+            //console.log('Audiosocket Server is running on port ' + port +'.');
+        });
+
+        let sockets = [];
+
+        server.on('connection', (originalSock) => {
+            const sock = new AudiosocketSocket( originalSock );
+
+            this.emit('connection', sock);
+
+            originalSock.on('close', () => {
+              sock.emit('close');
+            });
+
+            originalSock.on('data', (data) => {
+                const header = data.slice(0, 3);
+                const payload = data.slice(3, data.length-1);
+                const messageType = header[0];
+
+                if (!validMessages.includes(messageType)) {
+                    // got unknown type of message
+                    console.error("received unknown message type ", {header:header, payload:payload});
+                    return;
+                }
+                const eventData = {
+                    messageType: messageType,
+                    data: payload 
+                };
+                sock.emit('event', eventData);
+            });
+        });
+    }
+}
