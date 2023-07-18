@@ -107,8 +107,6 @@ export class AudiosocketServer extends EventEmitter {
             //console.log('Audiosocket Server is running on port ' + port +'.');
         });
 
-        let sockets = [];
-
         server.on('connection', (originalSock) => {
             const sock = new AudiosocketSocket( originalSock );
 
