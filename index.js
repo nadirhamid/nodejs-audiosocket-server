@@ -20,54 +20,58 @@ const sendAudio = (sock, data) => {
     const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
     let i = 0;
     let chunks = 0;
-  
-    const interval = setInterval(() => {
-      if (i >= data.length) {
-        clearInterval(interval);
-        return;
-      }
-  
-      let chunkLen = SLINChunkSize;
-      if (i + SLINChunkSize > data.length) {
-        chunkLen = data.length - i;
-      }
  
-      const chunk = SlinMessage(data.slice(i, i + chunkLen));
-      if (!sock.write(chunk)) {
-        sock.once('drain', () => {
-          if (i < data.length) {
-            sendChunk();
-          }
-        });
-        return;
-      }
-  
-      chunks++;
-      i += chunkLen;
-    }, 20);
-  
-    const sendChunk = () => {
-      if (i >= data.length) {
-        clearInterval(interval);
-        return;
-      }
-  
-      let chunkLen = SLINChunkSize;
-      if (i + SLINChunkSize > data.length) {
-        chunkLen = data.length - i;
-      }
-  
-      const chunk = audiosocket.SlinMessage(data.slice(i, i + chunkLen));
-      if (!sock.write(chunk)) {
-        sock.once('drain', sendChunk);
-        return;
-      }
-  
-      chunks++;
-      i += chunkLen;
-    };
-  
     return new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        if (i >= data.length) {
+          clearInterval(interval);
+          return resolve();
+        }
+    
+        let chunkLen = SLINChunkSize;
+        if (i + SLINChunkSize > data.length) {
+          chunkLen = data.length - i;
+        }
+  
+        const chunk = SlinMessage(data.slice(i, i + chunkLen));
+        if (!sock.write(chunk)) {
+          sock.once('drain', () => {
+            if (i < data.length) {
+              sendChunk();
+              return;
+            }
+            resolve();
+          });
+          return;
+        }
+    
+        chunks++;
+        i += chunkLen;
+      }, 20);
+    
+      const sendChunk = () => {
+        if (i >= data.length) {
+          clearInterval(interval);
+          console.log("done sending chunks");
+          resolve();
+          return;
+        }
+    
+        let chunkLen = SLINChunkSize;
+        if (i + SLINChunkSize > data.length) {
+          chunkLen = data.length - i;
+        }
+    
+        const chunk = audiosocket.SlinMessage(data.slice(i, i + chunkLen));
+        if (!sock.write(chunk)) {
+          sock.once('drain', sendChunk);
+          return;
+        }
+    
+        chunks++;
+        i += chunkLen;
+      };
+    
       sock.on('error', reject);
       sock.on('finish', () => {
         clearInterval(interval);

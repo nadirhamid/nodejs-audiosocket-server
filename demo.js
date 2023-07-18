@@ -12,7 +12,6 @@ const audio = getByteArray("./media/demo-congrats.slin");
 server.on('connection', (sock) => {
     console.log("got connection ", sock)
     sock.on('event', (obj) => {
-        console.log("got event ");
         const {messageType, header, payload} = obj;
         if ( messageType === AudiosocketMessageTypes.ID ) {
             console.log('got ID');
@@ -20,13 +19,14 @@ server.on('connection', (sock) => {
                 console.log("sending audio to channel")
                 await sock.sendAudio( audio );
                 console.log("done");
+                await sock.sendAudio( audio );
             });
         } else if ( messageType === AudiosocketMessageTypes.HANGUP ) {
             console.log('got HANGUP');
         } else if ( messageType === AudiosocketMessageTypes.SILENCE ) {
             console.log('got SILENCE');
         } else if ( messageType === AudiosocketMessageTypes.SLIN ) {
-            console.log('got SLIN audio data');
+            //console.log('got SLIN audio data');
         } else if ( messageType === AudiosocketMessageTypes.ERROR ) {
             console.log('got ERROR');
         }
