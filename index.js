@@ -127,7 +127,7 @@ export class AudiosocketServer extends EventEmitter {
 
                 if (!validMessages.includes(messageType)) {
                     // got unknown type of message
-                    console.error("received unknown message type ", {header:header, payload:payload});
+                    console.error("Audiosocket server received unknown message type ", {header:header, payload:payload});
                     return;
                 }
                 const eventData = {

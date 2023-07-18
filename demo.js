@@ -7,7 +7,8 @@ function getByteArray(filePath){
 }
 
 const server = new AudiosocketServer(8080, '0.0.0.0');
-const audio = getByteArray("./media/demo-congrats.slin");
+const audio1 = getByteArray("./media/demo-congrats.slin");
+const audio2 = getByteArray("./media/preamble.slin");
 
 server.on('connection', (sock) => {
     console.log("got connection ", sock)
@@ -17,9 +18,9 @@ server.on('connection', (sock) => {
             console.log('got ID');
             setImmediate(async () => {
                 console.log("sending audio to channel")
-                await sock.sendAudio( audio );
+                await sock.sendAudio( audio1 );
                 console.log("done");
-                await sock.sendAudio( audio );
+                await sock.sendAudio( audio2 );
             });
         } else if ( messageType === AudiosocketMessageTypes.HANGUP ) {
             console.log('got HANGUP');
