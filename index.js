@@ -11,7 +11,10 @@ export const AudiosocketMessageTypes = {
 };
 
 const validMessages = Object.values( AudiosocketMessageTypes );
-const maxEventListeners = 10;
+const tcpMaxEventListeners = 10;
+// many audio packets could be sent and the library may need to listen to many events; thus
+// it is best to set the event listener limit to a large number. This way no warnings will show
+const audioMaxEventListeners = 999999;
 
 const sendAudio = (sock, data) => {
     const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
@@ -68,7 +71,7 @@ const sendAudio = (sock, data) => {
         chunks++;
         i += chunkLen;
       };
-    
+   
       sock.on('error', reject);
       sock.on('finish', () => {
         clearInterval(interval);
@@ -94,7 +97,6 @@ export class AudiosocketSocket extends EventEmitter {
     constructor(sock) {
         super();
         this.sock = sock;
-        this.setMaxListeners(maxEventListeners);
     }
     async sendAudio(data) {
         return sendAudio( this.sock, data );
@@ -105,7 +107,6 @@ export class AudiosocketServer extends EventEmitter {
 
     constructor(port, host, debug) {
         super();
-        this.setMaxListeners(maxEventListeners);
         const server = net.createServer();
         port = port||8080;
         host = host||"127.0.0.1";
@@ -119,7 +120,7 @@ export class AudiosocketServer extends EventEmitter {
 
         server.on('connection', (originalSock) => {
 
-            originalSock.setMaxListeners(10);
+            originalSock.setMaxListeners(audioMaxEventListeners);
             const sock = new AudiosocketSocket( originalSock );
 
             this.emit('connection', sock);
