@@ -26,19 +26,6 @@ server.on('connection', (sock) => {
 
                 await sock.sendAudio( audio1 );
                 console.log("done");
-
-                await sock.sendAudio( audio1 );
-                console.log("done");
-
-                await sock.sendAudio( audio1 );
-                console.log("done");
-
-                await sock.sendAudio( audio1 );
-                console.log("done");
-
-                await sock.sendAudio( audio1 );
-                console.log("done");
-                await sock.sendAudio( audio2 );
             });
         } else if ( messageType === AudiosocketMessageTypes.HANGUP ) {
             console.log('got HANGUP');
