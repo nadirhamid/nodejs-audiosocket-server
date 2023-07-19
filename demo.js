@@ -20,6 +20,24 @@ server.on('connection', (sock) => {
                 console.log("sending audio to channel")
                 await sock.sendAudio( audio1 );
                 console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
+
+                await sock.sendAudio( audio1 );
+                console.log("done");
                 await sock.sendAudio( audio2 );
             });
         } else if ( messageType === AudiosocketMessageTypes.HANGUP ) {

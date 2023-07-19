@@ -2,10 +2,6 @@ import net from "net";
 import fs from "fs";
 import { EventEmitter } from 'node:events';
 
-const server = net.createServer();
-var port = 8080;
-var host = "0.0.0.0";
-
 export const AudiosocketMessageTypes = {
 	HANGUP: 0x00,
 	ID: 0x01,
@@ -15,6 +11,7 @@ export const AudiosocketMessageTypes = {
 };
 
 const validMessages = Object.values( AudiosocketMessageTypes );
+const maxEventListeners = 10;
 
 const sendAudio = (sock, data) => {
     const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
@@ -97,6 +94,7 @@ export class AudiosocketSocket extends EventEmitter {
     constructor(sock) {
         super();
         this.sock = sock;
+        this.setMaxListeners(maxEventListeners);
     }
     async sendAudio(data) {
         return sendAudio( this.sock, data );
@@ -105,13 +103,23 @@ export class AudiosocketSocket extends EventEmitter {
 
 export class AudiosocketServer extends EventEmitter {
 
-    constructor(port, host) {
+    constructor(port, host, debug) {
         super();
+        this.setMaxListeners(maxEventListeners);
+        const server = net.createServer();
+        port = port||8080;
+        host = host||"127.0.0.1";
+        debug = debug || false;
+
         server.listen(port, host, () => {
-            //console.log('Audiosocket Server is running on port ' + port +'.');
+          if ( debug ) {
+            console.log('Audiosocket Server is running on port ' + port +'.');
+          }
         });
 
         server.on('connection', (originalSock) => {
+
+            originalSock.setMaxListeners(10);
             const sock = new AudiosocketSocket( originalSock );
 
             this.emit('connection', sock);
