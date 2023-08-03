@@ -142,7 +142,6 @@ export class AudiosocketServer extends EventEmitter {
             });
 
             originalSock.on('data', (data) => {
-              console.log("data ", data);
                 const header = data.slice(0, 3);
                 const payload = data.slice(3, data.length);
                 const messageType = header[0];
