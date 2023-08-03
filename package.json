@@ -1,5 +1,8 @@
 {
     "name": "audiosocket",
     "version": "v0.0.1",
-    "type": "module"
+    "type": "module",
+    "dependencies": {
+        "uuid-buffer": "^1.0.3"
+    }
 }

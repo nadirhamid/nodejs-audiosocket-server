@@ -1,6 +1,7 @@
 import net from "net";
 import fs from "fs";
 import { EventEmitter } from 'node:events';
+import uuidBuffer from 'uuid-buffer';
 
 export const AudiosocketMessageTypes = {
 	HANGUP: 0x00,
@@ -141,8 +142,9 @@ export class AudiosocketServer extends EventEmitter {
             });
 
             originalSock.on('data', (data) => {
+              console.log("data ", data);
                 const header = data.slice(0, 3);
-                const payload = data.slice(3, data.length-1);
+                const payload = data.slice(3, data.length);
                 const messageType = header[0];
 
                 if (!validMessages.includes(messageType)) {
@@ -154,6 +156,9 @@ export class AudiosocketServer extends EventEmitter {
                     data: payload 
                 };
                 const eventType = mapEventType(messageType)
+                if (messageType===AudiosocketMessageTypes.ID) {
+                  eventData['uuid'] = uuidBuffer.toString(payload);
+                }
                 sock.emit(eventType, eventData);
             });
         });
