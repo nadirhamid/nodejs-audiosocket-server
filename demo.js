@@ -16,11 +16,10 @@ server.on('connection', (sock) => {
         console.log('uuid is ' + event.uuid);
         setImmediate(async () => {
             console.log("sending audio to channel")
-            await sock.sendAudio( audio1 );
-            console.log("done");
-
-            await sock.sendAudio( audio2 );
-            console.log("done");
+            let audio = sock.sendAudio( audio1 );
+            audio.on("done",() => {
+                console.log("done");
+            });
         });
     });
     sock.on('hangup', (event) => {

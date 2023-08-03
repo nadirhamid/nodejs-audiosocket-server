@@ -18,101 +18,112 @@ const tcpMaxEventListeners = 10;
 const audioMaxEventListeners = 999999;
 
 const sendAudio = (sock, data) => {
-    const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
-    let i = 0;
-    let chunks = 0;
- 
-    return new Promise((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (i >= data.length) {
-          clearInterval(interval);
-          return resolve();
-        }
-    
-        let chunkLen = SLINChunkSize;
-        if (i + SLINChunkSize > data.length) {
-          chunkLen = data.length - i;
-        }
+  const SLINChunkSize = 320 // 8000Hz * 20ms * 2 bytes
+  let i = 0;
+  let chunks = 0;
+  let sendInterval = 20;
+
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(() => {
+      if (i >= data.length) {
+        clearInterval(interval);
+        return resolve();
+      }
   
-        const chunk = SlinMessage(data.slice(i, i + chunkLen));
-        if (!sock.write(chunk)) {
-          sock.once('drain', () => {
-            if (i < data.length) {
-              sendChunk();
-              return;
-            }
-            resolve();
-          });
-          return;
-        }
-    
-        chunks++;
-        i += chunkLen;
-      }, 20);
-    
-      const sendChunk = () => {
-        if (i >= data.length) {
-          clearInterval(interval);
-          console.log("done sending chunks");
+      let chunkLen = SLINChunkSize;
+      if (i + SLINChunkSize > data.length) {
+        chunkLen = data.length - i;
+      }
+
+      const chunk = SlinMessage(data.slice(i, i + chunkLen));
+      if (!sock.write(chunk)) {
+        sock.once('drain', () => {
+          if (i < data.length) {
+            sendChunk();
+            return;
+          }
           resolve();
-          return;
-        }
-    
-        let chunkLen = SLINChunkSize;
-        if (i + SLINChunkSize > data.length) {
-          chunkLen = data.length - i;
-        }
-    
-        const chunk = audiosocket.SlinMessage(data.slice(i, i + chunkLen));
-        if (!sock.write(chunk)) {
-          sock.once('drain', sendChunk);
-          return;
-        }
-    
-        chunks++;
-        i += chunkLen;
-      };
-   
-      sock.on('error', reject);
-      sock.on('finish', () => {
+        });
+        return;
+      }
+  
+      chunks++;
+      i += chunkLen;
+    }, sendInterval)
+  
+    const sendChunk = () => {
+      if (i >= data.length) {
         clearInterval(interval);
         resolve();
-      });
+        return;
+      }
+  
+      let chunkLen = SLINChunkSize;
+      if (i + SLINChunkSize > data.length) {
+        chunkLen = data.length - i;
+      }
+  
+      const chunk = audiosocket.SlinMessage(data.slice(i, i + chunkLen));
+      if (!sock.write(chunk)) {
+        sock.once('drain', sendChunk);
+        return;
+      }
+  
+      chunks++;
+      i += chunkLen;
+    };
+ 
+    sock.on('error', reject);
+    sock.on('finish', () => {
+      //clearInterval(interval);
+      resolve();
     });
+  });
 };
 
 const SlinMessage = (inData) => {
-    if (inData.length > 65535) {
-      throw new Error("audiosocket: message too large");
-    }
-  
-    const out = Buffer.alloc(3 + inData.length);
-    out[0] = AudiosocketMessageTypes.SLIN; 
-    out.writeUInt16BE(inData.length, 1);
-    inData.copy(out, 3);
-    return out;
+  if (inData.length > 65535) {
+    throw new Error("audiosocket: message too large");
+  }
+
+  const out = Buffer.alloc(3 + inData.length);
+  out[0] = AudiosocketMessageTypes.SLIN; 
+  out.writeUInt16BE(inData.length, 1);
+  inData.copy(out, 3);
+  return out;
 };
 
 const mapEventType = (messageType) => {
-  const keys = Object.keys( AudiosocketMessageTypes );
-  for ( var index in keys ) {
-    const key = keys[index];
-    if ( messageType == AudiosocketMessageTypes[key] ) {
-      return key.toLowerCase();
-    }
+const keys = Object.keys( AudiosocketMessageTypes );
+for ( var index in keys ) {
+  const key = keys[index];
+  if ( messageType == AudiosocketMessageTypes[key] ) {
+    return key.toLowerCase();
   }
-  throw new Error("no event type found");
+}
+throw new Error("no event type found");
 }
 
+class AudiosocketAudioEvent extends EventEmitter {
+  constructor(sock, audioData) {
+      super();
+      console.log("sock event is ", sock)
+      this.emit('started');
+      setImmediate(async() => {
+        await sendAudio( sock, audioData );
+        this.emit('done');
+      })
+  }
+}
 
-export class AudiosocketSocket extends EventEmitter {
-    constructor(sock) {
-        super();
-        this.sock = sock;
-    }
-    async sendAudio(data) {
-        return sendAudio( this.sock, data );
-    }
+class AudiosocketSocket extends EventEmitter {
+  constructor(sock, data) {
+      super();
+      this.sock = sock;
+  }
+  sendAudio(data) {
+    return new AudiosocketAudioEvent( this.sock, data );
+  }
 }
 
 export class AudiosocketServer extends EventEmitter {
