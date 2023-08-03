@@ -92,6 +92,17 @@ const SlinMessage = (inData) => {
     return out;
 };
 
+const mapEventType = (messageType) => {
+  const keys = Object.keys( AudiosocketMessageTypes );
+  for ( var index in keys ) {
+    const key = keys[index];
+    if ( messageType == AudiosocketMessageTypes[key] ) {
+      return key.toLowerCase();
+    }
+  }
+  throw new Error("no event type found");
+}
+
 
 export class AudiosocketSocket extends EventEmitter {
     constructor(sock) {
@@ -140,10 +151,10 @@ export class AudiosocketServer extends EventEmitter {
                     return;
                 }
                 const eventData = {
-                    messageType: messageType,
                     data: payload 
                 };
-                sock.emit('event', eventData);
+                const eventType = mapEventType(messageType)
+                sock.emit(eventType, eventData);
             });
         });
     }
