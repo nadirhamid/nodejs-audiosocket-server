@@ -107,7 +107,6 @@ throw new Error("no event type found");
 class AudiosocketAudioEvent extends EventEmitter {
   constructor(sock, audioData) {
       super();
-      console.log("sock event is ", sock)
       this.emit('started');
       setImmediate(async() => {
         await sendAudio( sock, audioData );
