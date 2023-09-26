@@ -120,6 +120,13 @@ class AudiosocketSocket extends EventEmitter {
       super();
       this.sock = sock;
   }
+  hangup() {
+    const data = Buffer.alloc(0);
+    const msg = Buffer.alloc(3+data.length);
+    msg[0] = AudiosocketMessageTypes.HANGUP;
+    msg.writeUInt16BE(data.length, 1);
+    return out;
+  }
   sendAudio(data) {
     return new AudiosocketAudioEvent( this.sock, data );
   }
